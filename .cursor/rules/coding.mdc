@@ -1,0 +1,140 @@
+---
+alwaysApply: true
+---
+You are an expert in TypeScript, Node.js, Next.js App Router, React, Supabase, Shadcn UI, Radix UI, Tailwind, UX/UI.
+
+# Project Organization & Architecture
+
+- Use the `src/app/` directory structure (`layout.tsx`, `page.tsx`, `loading.tsx`, `error.tsx`).
+- Group files by domain when possible (e.g., `features/auth`, `features/dashboard`).
+- Use `lib/` for low-level logic like the Supabase client or third-party utilities.
+- Place migrations and edge functions inside the `supabase/` directory.
+
+# Supabase Integration
+
+- Use `lib/supabase/server.ts` and `lib/supabase/client.ts` to separate environments.
+- Never access Supabase directly in components; use server actions or API routes.
+- Enable Row Level Security (RLS) and Supabase Auth from day one.
+- Store keys in environment variables and use `.env.local` for dev-only secrets.
+
+# Code Style and Structure
+
+- Write concise, technical TypeScript with accurate examples.
+- Use comments to help explain technical concepts and functions
+- Prefer functional and declarative patterns over classes.
+- Avoid code duplication via helper functions and modular components.
+- Use descriptive variable names with auxiliary verbs (e.g., `isLoading`, `hasError`).
+- File structure should follow: exported component → subcomponents → helpers → static → types.
+
+# Naming Conventions
+
+- Use lowercase with dashes for directories (e.g., `components/auth-wizard`).
+- Use named exports for components.
+- Use interfaces instead of types for object shapes.
+- Avoid enums; use plain object maps.
+
+# TypeScript Usage
+
+- All code must be written in TypeScript.
+- Prefer interfaces for props and data models.
+- Use functional components with clearly typed props.
+- Avoid `any`; use `unknown` or explicit types when unsure.
+
+# UI and Styling
+
+## 1. Components (Shadcn UI + Radix)
+- Always use Shadcn UI for visual consistency.
+- USA Radix Primitives For accessibility (Focus, Keyboard Nav, ARIA).
+- Customize components creating typated variants, not overwriting classes directly.
+
+## 2. Tailwind CSS as a base
+- Use predefined tokens of Tailwind (`P-4`,` M-6`, `text-lg`, etc.) instead of arbitrary values.
+- Maintain a coherent typographic scale **: `text-sm`,` text-base`, `text-lg`,` text-xl`.
+- For layout, use utility-first (`flex`,` grid`, `gap-x-4`).
+- When you detect frequent repetition, abstract using `classname`,` cva` or `@apply`.
+
+## 3. Mobile-Firs and Responsive
+- Design mobile-first
+- Use `flex` +` grid` to maintain fluid layouts.
+- Use `Aspect-Ratio`,` Object-Cover` and `Overflow-Hidden` in responsive images.
+
+## 4. Dark Mode
+- Implement `Dark variants:` in texts, funds and icons.
+- Be sure to meet adequate contrast in both modes.
+- Use the design tokens (`text-mute-farangound`,` bg-background`, `bg-muteted`).
+- Persistence of theme with `localStorage` or` prefers-color-scheme`.
+
+## 5. Visual hierarchy
+- Keep consistent spaced **: `GAP-2`,` GAP-4`, `GAP-6`.
+- Titles: `font-semibold` +` tracking-right`.
+- Secondary text: `Text-mute-farangound`.
+- Clear colored palette: `Primary`,` secondary`, `destructive`,` mutad`.
+
+## 6. Micro -foundation and feedback
+- Use soft transitions: `Transition`,` Duration-200`, `ease-in-out`.
+- Define interactive states: `Hover:`, `Focus:`, `Active:`.
+- Forms: 
+- Buttons with `loading` →` disabled: opacity-50`. 
+- Errors → `Text-desstructive`. 
+- Confirmations → `BG-GREEN-500/10 text-GREEN-700`.
+
+## 7. Accessibility
+- All inputs must have `Label` or` Aria-Label`.
+- Focus states always visible: `ring-2 ring-primery`.
+- USA Radix For menus, tooltips, manners → Avoid reinventing.
+
+## 8. Performance and maintainability
+- Use `@apply` in css only for very repeated patterns.
+- Use `CLSX` or` CVA` for component variants.
+- Optimizes images (`Next/Image` if you use Next.js).
+- Do not abuse arbitrary classes → keep scalability.
+
+
+# Performance Optimization
+
+- Minimize use of `'use client'`, `useEffect`, and `setState`.
+- Use React Server Components and Server Actions when possible.
+- Wrap client components in `<Suspense>` with fallbacks.
+- Lazy load non-critical components.
+- Optimize images: use WebP, include width/height, lazy-load.
+
+# State Management
+
+- Use `useFormState` and `useFormStatus` with server actions.
+- Use `useOptimistic` for lightweight interactive state.
+- Avoid global state libraries unless necessary.
+
+# Linting
+
+- Use ESLint, Prettier, and TypeScript strict mode.
+- Validate all inputs with `zod`
+
+# Developer Experience (DX)
+
+- `pnpm dev` should start cleanly with no TypeScript errors.
+- Document key decisions in `README.md` or `docs/`.
+
+# Accessibility and UX
+
+- Use accessible Radix primitives and Shadcn components.
+- Ensure proper `aria-*`, focus handling, and keyboard support.
+- Use consistent spacing and typography.
+
+# Security
+
+- Environment Variables: Never expose secrets in the browser. Use `.env.local` for private keys and avoid using them in Client Components.
+- Supabase Row Level Security (RLS): Always enable RLS on every table. Write rules that validate user identity via `auth.uid()` or `request.auth`.
+- Auth Guards: Use server-side validation for all sensitive logic. Never trust client-side checks alone.
+- Supabase Client Access: Use the `anon` key only in client components for public, safe queries. Use the `service_role` key only on the server.
+- API Routes / Server Actions: Validate all inputs with `zod` or similar. Check session/user IDs before accessing or modifying data.
+- Edge Function Secrets: Store secrets in Supabase's function environment variables, not in code.
+- Vercel Web Application Firewall (WAF): Enable WAF in Vercel settings to block automated threats.
+
+- Limit Data Exposure: Only return the necessary fields from the database. Avoid exposing sensitive or unnecessary data.
+- Session Management: Use Supabase Auth session checks on protected routes. Clear stale sessions on logout.
+
+# Key Conventions
+
+- Optimize Core Web Vitals: LCP, CLS, FID.
+- Avoid `'use client'` unless needed for Web APIs.
+- Follow official Next.js docs for routing, rendering, and data fetching.
