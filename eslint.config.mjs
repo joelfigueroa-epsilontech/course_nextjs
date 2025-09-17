@@ -10,7 +10,7 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  ...compat.extends("next/core-web-vitals", "next/typescript", "plugin:prettier/recommended", "airbnb", "airbnb/hooks", "airbnb-typescript"),
   {
     ignores: [
       "node_modules/**",
@@ -19,6 +19,15 @@ const eslintConfig = [
       "build/**",
       "next-env.d.ts",
     ],
+    rules: {
+      "max-len": [
+        "error",
+        {
+          code: 140
+        },
+      ],
+      quotes: [2, "single", { avoidEscape: true }],
+    },
   },
 ];
 
