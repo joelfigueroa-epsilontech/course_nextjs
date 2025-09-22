@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button"
+import { Button } from '@/components/ui/button';
 
 export function HeroSection() {
   return (
@@ -21,8 +21,7 @@ export function HeroSection() {
         </h1>
 
         <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white/90 mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed text-pretty px-2">
-          Transform your ideas into compelling stories that captivate readers and build your audience with our powerful
-          publishing platform.
+          Transform your ideas into compelling stories that captivate readers and build your audience with our powerful publishing platform.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center max-w-md sm:max-w-none mx-auto">
@@ -50,5 +49,5 @@ export function HeroSection() {
         </div>
       </div>
     </section>
-  )
+  );
 }

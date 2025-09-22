@@ -1,15 +1,15 @@
-"use client"
+'use client';
 
-import Image from "next/image"
-import Link from "next/link"
-import { useState } from "react"
+import Image from 'next/image';
+import Link from 'next/link';
+import { useState } from 'react';
 
 export default function Header() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen)
-  }
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
 
   return (
     <div className="fixed top-0 left-0 right-0 z-50 p-2 sm:p-4">
@@ -50,7 +50,7 @@ export default function Header() {
               </div>
 
               {/* Mobile Menu Button */}
-              <button 
+              <button
                 onClick={toggleMobileMenu}
                 className="lg:hidden text-white/90 hover:text-white transition-colors p-1"
                 aria-label="Toggle mobile menu"
@@ -69,30 +69,30 @@ export default function Header() {
             {isMobileMenuOpen && (
               <div className="lg:hidden border-t border-white/10 bg-black/30 backdrop-blur-md rounded-b-2xl">
                 <nav className="px-3 sm:px-6 py-4 space-y-3">
-                  <Link 
-                    href="/articles" 
+                  <Link
+                    href="/articles"
                     className="block text-white/90 hover:text-white transition-colors text-sm font-medium py-2"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Articles
                   </Link>
-                  <Link 
-                    href="/about" 
+                  <Link
+                    href="/about"
                     className="block text-white/90 hover:text-white transition-colors text-sm font-medium py-2"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     About
                   </Link>
-                  <Link 
-                    href="/contact" 
+                  <Link
+                    href="/contact"
                     className="block text-white/90 hover:text-white transition-colors text-sm font-medium py-2"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Contact
                   </Link>
                   <hr className="border-white/20 my-3" />
-                  <Link 
-                    href="/login" 
+                  <Link
+                    href="/login"
                     className="block text-white/90 hover:text-white transition-colors text-sm font-medium py-2"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
@@ -112,5 +112,5 @@ export default function Header() {
         </div>
       </header>
     </div>
-  )
+  );
 }
