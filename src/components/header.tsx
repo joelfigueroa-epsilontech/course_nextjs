@@ -38,8 +38,8 @@ export default function Header() {
 
               {/* Desktop Auth Buttons */}
               <div className="hidden lg:flex items-center gap-3">
-                <Link href="/login" className="text-white/90 hover:text-white transition-colors text-sm font-medium">
-                  Login
+                <Link href="/signin" className="text-white/90 hover:text-white transition-colors text-sm font-medium">
+                  Sign In
                 </Link>
                 <Link
                   href="/signup"
