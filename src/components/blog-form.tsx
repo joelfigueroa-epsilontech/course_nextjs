@@ -1,17 +1,20 @@
 'use client';
 
+import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/dropzone';
 import { TipTapEditor } from '@/components/tiptap-editor';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useNotifications } from '@/hooks/use-notifications';
+import { useSupabaseUpload } from '@/hooks/use-supabase-upload';
 import { createBlog, updateBlog } from '@/lib/actions/blog-actions';
 import { type Blog, type BlogFormData } from '@/lib/database.types';
+import { createClient as createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { getUserFriendlyErrorMessage } from '@/lib/utils/notification-filters';
 import { ArrowLeft, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 
 interface BlogFormProps {
   blog?: Blog;
@@ -31,6 +34,30 @@ export function BlogForm({ blog, mode }: BlogFormProps) {
     content: blog?.content || '',
     author: blog?.author || '',
   });
+
+  // Dropzone configuration for cover image
+  const uploadProps = useSupabaseUpload({
+    bucketName: 'blog-images',
+    path: 'blogs',
+    allowedMimeTypes: ['image/*'],
+    maxFiles: 1,
+    maxFileSize: 5 * 1000 * 1000, // 5MB
+  });
+
+  // When upload succeeds, set image URL in form
+  const supabaseClient = useMemo(() => createSupabaseBrowserClient(), []);
+  useEffect(() => {
+    if (uploadProps.isSuccess && uploadProps.successes.length > 0) {
+      const uploadedFileName = uploadProps.successes[0];
+      const filePath = `blogs/${uploadedFileName}`;
+      const { data } = supabaseClient.storage.from('blog-images').getPublicUrl(filePath);
+      const publicUrl = data.publicUrl;
+      if (publicUrl && formData.image !== publicUrl) {
+        setFormData((prev) => ({ ...prev, image: publicUrl }));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uploadProps.isSuccess, uploadProps.successes]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,10 +79,7 @@ export function BlogForm({ blog, mode }: BlogFormProps) {
       return;
     }
 
-    if (formData.image && !formData.image.match(/^https?:\/\/.+/)) {
-      form.invalidFormat('image URL');
-      return;
-    }
+    // Cover image now handled by uploader; URL is set automatically when upload succeeds
 
     startTransition(async () => {
       try {
@@ -159,22 +183,19 @@ export function BlogForm({ blog, mode }: BlogFormProps) {
               />
             </div>
 
-            {/* Cover Image */}
+            {/* Cover Image Upload */}
             <div className="space-y-2">
-              <Label htmlFor="image">Cover Image URL</Label>
-              <Input
-                id="image"
-                type="url"
-                value={formData.image}
-                onChange={(e) => setFormData((prev) => ({ ...prev, image: e.target.value }))}
-                placeholder="https://example.com/image.jpg"
-              />
-              {formData.image && (
+              <Label>Cover Image</Label>
+              <Dropzone {...uploadProps} className="cursor-pointer" aria-label="Cover image uploader">
+                <DropzoneEmptyState />
+                <DropzoneContent />
+              </Dropzone>
+              {formData.image && !uploadProps.isSuccess && (
                 <div className="mt-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={formData.image}
-                    alt="Cover preview"
+                    alt="Current cover image"
                     className="w-full max-w-md h-48 object-cover rounded-lg border"
                     onError={(e) => {
                       e.currentTarget.style.display = 'none';
