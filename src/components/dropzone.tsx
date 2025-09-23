@@ -172,7 +172,7 @@ const DropzoneEmptyState = ({ className }: { className?: string }) => {
         <p className="text-xs text-muted-foreground">
           Drag and drop or{' '}
           <a onClick={() => inputRef.current?.click()} className="underline cursor-pointer transition hover:text-foreground">
-            select {maxFiles === 1 ? `file` : 'files'}
+            select {maxFiles === 1 ? 'file' : 'files'}
           </a>{' '}
           to upload
         </p>

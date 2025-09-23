@@ -14,9 +14,10 @@ import { useState, useTransition } from 'react';
 
 interface BlogCardProps {
   blog: Blog;
+  showActions?: boolean; // Optional prop to show/hide edit/delete actions
 }
 
-export function BlogCard({ blog }: BlogCardProps) {
+export function BlogCard({ blog, showActions = true }: BlogCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { blog: blogNotifications } = useNotifications();
@@ -64,15 +65,15 @@ export function BlogCard({ blog }: BlogCardProps) {
     const content = blog.content?.toLowerCase() || '';
 
     if (title.includes('design') || content.includes('design') || title.includes('ui') || title.includes('ux')) {
-      return { name: 'Design', color: 'bg-orange-500' };
+      return { name: 'Design', color: 'bg-chart-1' };
     } else if (title.includes('tech') || title.includes('development') || title.includes('code') || title.includes('programming')) {
-      return { name: 'Tech', color: 'bg-blue-500' };
+      return { name: 'Tech', color: 'bg-chart-2' };
     } else if (title.includes('business') || title.includes('startup') || title.includes('entrepreneur')) {
-      return { name: 'Business', color: 'bg-green-500' };
+      return { name: 'Business', color: 'bg-chart-3' };
     } else if (title.includes('tutorial') || title.includes('guide') || title.includes('learn')) {
-      return { name: 'Tutorial', color: 'bg-purple-500' };
+      return { name: 'Tutorial', color: 'bg-chart-4' };
     } else {
-      return { name: 'Article', color: 'bg-slate-500' };
+      return { name: 'Article', color: 'bg-chart-5' };
     }
   };
 
@@ -112,42 +113,44 @@ export function BlogCard({ blog }: BlogCardProps) {
             </>
           )}
 
-          {/* Actions dropdown */}
-          <div className="absolute top-3 right-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="bg-white/20 backdrop-blur-sm h-8 w-8 p-0 border-0 hover:bg-white/30"
-                  disabled={isPending}
-                >
-                  <MoreHorizontal className="h-4 w-4 text-white" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <Link href={`/dashboard/blogs/${blog.slug}/edit`}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDelete} disabled={isDeleting} className="text-destructive focus:text-destructive">
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  {isDeleting ? 'Deleting...' : 'Delete'}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          {/* Actions dropdown - only show if showActions is true */}
+          {showActions && (
+            <div className="absolute top-3 right-3">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="bg-primary-foreground/20 backdrop-blur-sm h-8 w-8 p-0 border-0 hover:bg-primary-foreground/30"
+                    disabled={isPending}
+                  >
+                    <MoreHorizontal className="h-4 w-4 text-primary-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link href={`/dashboard/blogs/${blog.slug}/edit`}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDelete} disabled={isDeleting} className="text-destructive focus:text-destructive">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {isDeleting ? 'Deleting...' : 'Delete'}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
 
           {/* Category badge */}
           <div className="absolute bottom-3 left-3">
-            <span className="bg-black/80 text-white text-xs px-2 py-1 rounded">{categoryInfo.name}</span>
+            <span className="bg-primary/80 text-primary-foreground text-xs px-2 py-1 rounded">{categoryInfo.name}</span>
           </div>
 
           {/* Reading time */}
           <div className="absolute bottom-3 right-3">
-            <div className="flex items-center gap-1 text-white/90 text-xs">
+            <div className="flex items-center gap-1 text-primary-foreground/90 text-xs">
               <Clock className="h-3 w-3" />
               <span>{readTime} min read</span>
             </div>
@@ -158,7 +161,7 @@ export function BlogCard({ blog }: BlogCardProps) {
       <CardContent className="p-4">
         {/* Title */}
         <h3 className="font-semibold text-lg leading-tight mb-2 group-hover:text-primary transition-colors">
-          <Link href={`/dashboard/blogs/${blog.slug}`} className="line-clamp-2">
+          <Link href={showActions ? `/dashboard/blogs/${blog.slug}` : `/blogs/${blog.slug}`} className="line-clamp-2">
             {blog.title}
           </Link>
         </h3>
@@ -169,7 +172,7 @@ export function BlogCard({ blog }: BlogCardProps) {
         {/* Author info */}
         <div className="flex items-center gap-3">
           {/* Avatar */}
-          <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-medium">
+          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-xs font-medium">
             {getInitials(blog.author)}
           </div>
 

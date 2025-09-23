@@ -1,9 +1,10 @@
 import { BlogCard } from '@/components/blog-card';
 import { getUserBlogs } from '@/lib/actions/blog-actions';
+import { type Blog } from '@/lib/database.types';
 import Link from 'next/link';
 
 export default async function DashboardPage() {
-  let blogs = [];
+  let blogs: Blog[] = [];
   let hasError = false;
 
   try {
