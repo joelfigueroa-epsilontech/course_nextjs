@@ -37,7 +37,7 @@ export function DashboardSidebar() {
   const pathname = usePathname();
 
   return (
-    <div className="flex flex-col w-64 bg-muted/40 border-r">
+    <div className="hidden lg:flex flex-col w-64 bg-muted/40 border-r">
       {/* Header */}
       <div className="flex items-center gap-2 p-6 border-b">
         <div className="flex items-center justify-center w-8 h-8 bg-primary rounded-md">

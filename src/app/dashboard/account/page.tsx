@@ -24,34 +24,34 @@ const userData = {
 
 export default function AccountPage() {
   return (
-    <div className="p-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Account</h1>
+    <div className="p-4 lg:p-6">
+      <div className="mb-6 lg:mb-8">
+        <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Account</h1>
         <p className="text-muted-foreground mt-2">Manage your account information and preferences</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         {/* Profile Overview */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4 lg:space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg lg:text-xl">
                 <User className="w-5 h-5" />
                 Profile Information
               </CardTitle>
               <CardDescription>Your personal information and account details</CardDescription>
             </CardHeader>
 
-            <CardContent className="space-y-6">
-              <div className="flex items-center gap-4">
-                <Avatar className="w-20 h-20">
+            <CardContent className="space-y-4 lg:space-y-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <Avatar className="w-16 h-16 lg:w-20 lg:h-20 mx-auto sm:mx-0">
                   <AvatarImage src={userData.avatar} />
-                  <AvatarFallback className="text-lg font-semibold">{userData.initials}</AvatarFallback>
+                  <AvatarFallback className="text-base lg:text-lg font-semibold">{userData.initials}</AvatarFallback>
                 </Avatar>
 
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-xl font-semibold">{userData.name}</h3>
+                <div className="flex-1 text-center sm:text-left">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                    <h3 className="text-lg lg:text-xl font-semibold">{userData.name}</h3>
                     <Badge variant="secondary">{userData.role}</Badge>
                   </div>
 
@@ -75,7 +75,7 @@ export default function AccountPage() {
                   </div>
                 </div>
 
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="w-full sm:w-auto">
                   <Edit className="w-4 h-4 mr-2" />
                   Edit Profile
                 </Button>
