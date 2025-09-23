@@ -4,8 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useNotifications } from '@/hooks/use-notifications';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
+import { getUserFriendlyErrorMessage } from '@/lib/utils/notification-filters';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -16,6 +18,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { auth, form } = useNotifications();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,16 +26,50 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
     setIsLoading(true);
     setError(null);
 
+    // Basic validation
+    if (!email.trim()) {
+      form.validationError('Please enter your email');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!password.trim()) {
+      form.validationError('Please enter your password');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!email.includes('@')) {
+      form.invalidFormat('email address');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-      if (error) throw error;
-      // Redirect to dashboard after successful login
-      router.push('/dashboard');
+
+      if (error) {
+        let userMessage: string;
+        if (error.message.includes('Invalid login credentials')) {
+          userMessage = 'Invalid email or password. Please try again.';
+        } else if (error.message.includes('Email not confirmed')) {
+          userMessage = 'Please check your email and click the confirmation link.';
+        } else {
+          userMessage = getUserFriendlyErrorMessage(error, 'Failed to sign in');
+        }
+        auth.loginError(userMessage);
+        setError(userMessage);
+      } else {
+        auth.loginSuccess();
+        router.push('/dashboard');
+      }
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : 'An error occurred');
+      const userMessage = getUserFriendlyErrorMessage(error, 'Failed to sign in');
+      auth.loginError(userMessage);
+      setError(userMessage);
     } finally {
       setIsLoading(false);
     }

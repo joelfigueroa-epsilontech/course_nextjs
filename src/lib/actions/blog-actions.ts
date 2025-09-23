@@ -175,7 +175,7 @@ export async function createBlog(formData: BlogFormData) {
   }
 
   revalidatePath('/dashboard/blogs');
-  redirect(`/dashboard/blogs/${blog.slug}`);
+  redirect(`/dashboard/blogs/${blog.slug}?success=blog_created`);
 }
 
 // Update an existing blog
@@ -215,7 +215,7 @@ export async function updateBlog(id: string, formData: BlogFormData) {
 
   revalidatePath('/dashboard/blogs');
   revalidatePath(`/dashboard/blogs/${blog.slug}`);
-  redirect(`/dashboard/blogs/${blog.slug}`);
+  redirect(`/dashboard/blogs/${blog.slug}?success=blog_updated`);
 }
 
 // Delete a blog

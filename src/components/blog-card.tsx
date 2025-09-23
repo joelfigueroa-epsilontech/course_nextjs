@@ -3,8 +3,10 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useNotifications } from '@/hooks/use-notifications';
 import { deleteBlog } from '@/lib/actions/blog-actions';
 import { type Blog } from '@/lib/database.types';
+import { getUserFriendlyErrorMessage } from '@/lib/utils/notification-filters';
 import { CalendarDays, Edit, MoreHorizontal, Trash2, User } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -17,6 +19,7 @@ interface BlogCardProps {
 export function BlogCard({ blog }: BlogCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const { blog: blogNotifications } = useNotifications();
 
   const handleDelete = async () => {
     if (!confirm('Are you sure you want to delete this blog post? This action cannot be undone.')) {
@@ -24,14 +27,16 @@ export function BlogCard({ blog }: BlogCardProps) {
     }
 
     setIsDeleting(true);
+
     startTransition(async () => {
       try {
         const result = await deleteBlog(blog.id);
         if (result.success) {
-          // Blog deleted successfully, the page will refresh automatically due to revalidatePath
+          blogNotifications.deleteSuccess();
         }
       } catch (error) {
-        alert('Failed to delete blog post. Please try again.');
+        const userMessage = getUserFriendlyErrorMessage(error, 'Failed to delete blog post');
+        blogNotifications.deleteError(userMessage);
       } finally {
         setIsDeleting(false);
       }

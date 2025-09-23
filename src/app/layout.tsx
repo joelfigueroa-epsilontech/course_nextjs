@@ -1,5 +1,8 @@
+import { NotificationHandler } from '@/components/notification-handler';
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { Suspense } from 'react';
+import { Toaster } from 'sonner';
 import './globals.css';
 
 const geistSans = Geist({
@@ -24,7 +27,35 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>{children}</body>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        {children}
+        <Toaster
+          position="top-right"
+          expand={true}
+          closeButton
+          visibleToasts={4}
+          toastOptions={{
+            duration: 4000,
+            // Force solid background for default toasts
+            style: {
+              background: 'var(--card)',
+              color: 'var(--card-foreground)',
+              border: '1px solid var(--border)',
+            },
+            classNames: {
+              toast: 'shadow-lg',
+              title: 'font-medium',
+              description: '',
+              actionButton: 'bg-[color:var(--card-foreground)] text-[color:var(--card)] hover:opacity-90',
+              cancelButton: 'bg-[color:var(--card)] text-[color:var(--card-foreground)] hover:opacity-90',
+              closeButton: '',
+            },
+          }}
+        />
+        <Suspense fallback={null}>
+          <NotificationHandler />
+        </Suspense>
+      </body>
     </html>
   );
 }

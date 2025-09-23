@@ -5,8 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useNotifications } from '@/hooks/use-notifications';
 import { createBlog, updateBlog } from '@/lib/actions/blog-actions';
 import { type Blog, type BlogFormData } from '@/lib/database.types';
+import { getUserFriendlyErrorMessage } from '@/lib/utils/notification-filters';
 import { ArrowLeft, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
@@ -20,6 +22,7 @@ export function BlogForm({ blog, mode }: BlogFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const { blog: blogNotifications, form } = useNotifications();
 
   const [formData, setFormData] = useState<BlogFormData>({
     title: blog?.title || '',
@@ -34,7 +37,23 @@ export function BlogForm({ blog, mode }: BlogFormProps) {
     setError(null);
 
     if (!formData.title.trim() || !formData.content.trim() || !formData.author.trim()) {
-      setError('Title, content, and author are required');
+      blogNotifications.requiredFields();
+      return;
+    }
+
+    // Enhanced validation
+    if (formData.title.trim().length < 3) {
+      form.validationError('Title must be at least 3 characters long');
+      return;
+    }
+
+    if (formData.content.trim().length < 10) {
+      form.validationError('Content must be at least 10 characters long');
+      return;
+    }
+
+    if (formData.image && !formData.image.match(/^https?:\/\/.+/)) {
+      form.invalidFormat('image URL');
       return;
     }
 
@@ -42,13 +61,38 @@ export function BlogForm({ blog, mode }: BlogFormProps) {
       try {
         if (mode === 'create') {
           await createBlog(formData);
+          // Success notification will show after redirect via NotificationHandler
         } else if (blog) {
           await updateBlog(blog.id, formData);
+          // Success notification will show after redirect via NotificationHandler
         } else {
-          throw new Error('No blog data available for update');
+          setError('No blog data available for update');
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
+        // Extra aggressive filtering for redirect errors in blog operations
+        const errorMessage = err instanceof Error ? err.message : String(err);
+
+        // Check if this is a redirect error and ignore it completely
+        if (
+          errorMessage.includes('NEXT_REDIRECT') ||
+          errorMessage.includes('redirect') ||
+          errorMessage.toLowerCase().includes('next_redirect')
+        ) {
+          console.log('Filtered redirect error in blog form:', errorMessage);
+          return; // Don't show any notification for redirect errors
+        }
+
+        // For non-redirect errors, use robust error message handling
+        const userFriendlyMessage = getUserFriendlyErrorMessage(
+          err,
+          mode === 'create' ? 'Failed to create blog post' : 'Failed to update blog post'
+        );
+
+        if (mode === 'create') {
+          blogNotifications.createError(userFriendlyMessage);
+        } else {
+          blogNotifications.updateError(userFriendlyMessage);
+        }
       }
     });
   };

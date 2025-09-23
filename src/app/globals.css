@@ -167,6 +167,39 @@
     @apply bg-background text-foreground;
     letter-spacing: var(--tracking-normal);
   }
+  /* Force solid backgrounds for sonner toasts */
+  /* Sonner toasts - enforce solid backgrounds using attribute selectors */
+  [data-sonner-toast] {
+    background-color: var(--card) !important;
+    color: var(--card-foreground) !important;
+    border: 1px solid var(--border) !important;
+    backdrop-filter: none !important;
+  }
+  [data-sonner-toast][data-type='success'] {
+    background-color: #dcfce7 !important; /* green-100 - verde pastel */
+    border-color: #bbf7d0 !important; /* green-200 */
+    color: #166534 !important; /* green-800 - texto oscuro para contraste */
+  }
+  [data-sonner-toast][data-type='error'] {
+    background-color: #fee2e2 !important; /* red-100 - rojo pastel */
+    border-color: #fecaca !important; /* red-200 */
+    color: #991b1b !important; /* red-800 - texto oscuro para contraste */
+  }
+  [data-sonner-toast][data-type='warning'] {
+    background-color: #fef3c7 !important; /* amber-100 - amarillo pastel */
+    border-color: #fde68a !important; /* amber-200 */
+    color: #92400e !important; /* amber-800 - texto oscuro para contraste */
+  }
+  [data-sonner-toast][data-type='info'] {
+    background-color: #dbeafe !important; /* blue-100 - azul pastel */
+    border-color: #bfdbfe !important; /* blue-200 */
+    color: #1e40af !important; /* blue-800 - texto oscuro para contraste */
+  }
+  [data-sonner-toast][data-type='loading'] {
+    background-color: var(--muted) !important;
+    border-color: color-mix(in oklch, var(--muted) 85%, black) !important;
+    color: var(--foreground) !important;
+  }
 }
 
 @layer utilities {

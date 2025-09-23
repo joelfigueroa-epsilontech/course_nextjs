@@ -192,4 +192,3 @@ export interface BlogFormData {
   content: string;
   author: string;
 }
-

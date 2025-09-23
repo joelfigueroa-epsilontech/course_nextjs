@@ -20,7 +20,7 @@ export default async function EditBlogPage({ params }: EditBlogPageProps) {
     }
 
     return <BlogForm blog={blog} mode="edit" />;
-  } catch (error) {
+  } catch {
     notFound();
   }
 }

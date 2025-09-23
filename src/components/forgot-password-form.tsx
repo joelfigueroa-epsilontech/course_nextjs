@@ -1,11 +1,13 @@
 'use client';
 
-import { cn } from '@/lib/utils';
-import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useNotifications } from '@/hooks/use-notifications';
+import { createClient } from '@/lib/supabase/client';
+import { cn } from '@/lib/utils';
+import { getUserFriendlyErrorMessage } from '@/lib/utils/notification-filters';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -14,6 +16,7 @@ export function ForgotPasswordForm({ className, ...props }: React.ComponentProps
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const { auth, form } = useNotifications();
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,15 +24,37 @@ export function ForgotPasswordForm({ className, ...props }: React.ComponentProps
     setIsLoading(true);
     setError(null);
 
+    // Basic validation
+    if (!email.trim()) {
+      form.validationError('Please enter your email');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!email.includes('@')) {
+      form.invalidFormat('email address');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       // The url which will be included in the email. This URL needs to be configured in your redirect URLs in the Supabase dashboard at https://supabase.com/dashboard/project/_/auth/url-configuration
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/update-password`,
       });
-      if (error) throw error;
-      setSuccess(true);
+
+      if (error) {
+        const userMessage = getUserFriendlyErrorMessage(error, 'Failed to send password reset email');
+        auth.passwordResetError(userMessage);
+        setError(userMessage);
+      } else {
+        auth.passwordResetSent();
+        setSuccess(true);
+      }
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : 'An error occurred');
+      const userMessage = getUserFriendlyErrorMessage(error, 'Failed to send password reset email');
+      auth.passwordResetError(userMessage);
+      setError(userMessage);
     } finally {
       setIsLoading(false);
     }

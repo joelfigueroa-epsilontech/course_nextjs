@@ -1,11 +1,13 @@
 'use client';
 
-import { cn } from '@/lib/utils';
-import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useNotifications } from '@/hooks/use-notifications';
+import { createClient } from '@/lib/supabase/client';
+import { cn } from '@/lib/utils';
+import { getUserFriendlyErrorMessage } from '@/lib/utils/notification-filters';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -14,6 +16,7 @@ export function UpdatePasswordForm({ className, ...props }: React.ComponentProps
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { auth, form } = useNotifications();
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,13 +24,33 @@ export function UpdatePasswordForm({ className, ...props }: React.ComponentProps
     setIsLoading(true);
     setError(null);
 
+    // Basic validation
+    if (!password.trim()) {
+      form.validationError('Please enter a new password');
+      setIsLoading(false);
+      return;
+    }
+
+    if (password.length < 6) {
+      form.validationError('Password must be at least 6 characters long');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
-      // Update this route to redirect to an authenticated route. The user already has an active session.
-      router.push('/protected');
+      if (error) {
+        const userMessage = getUserFriendlyErrorMessage(error, 'Failed to update password');
+        auth.passwordUpdateError(userMessage);
+        setError(userMessage);
+      } else {
+        auth.passwordUpdateSuccess();
+        router.push('/protected');
+      }
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : 'An error occurred');
+      const userMessage = getUserFriendlyErrorMessage(error, 'Failed to update password');
+      auth.passwordUpdateError(userMessage);
+      setError(userMessage);
     } finally {
       setIsLoading(false);
     }

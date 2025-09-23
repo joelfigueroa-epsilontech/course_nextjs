@@ -1,11 +1,13 @@
 'use client';
 
-import { cn } from '@/lib/utils';
-import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useNotifications } from '@/hooks/use-notifications';
+import { createClient } from '@/lib/supabase/client';
+import { cn } from '@/lib/utils';
+import { getUserFriendlyErrorMessage } from '@/lib/utils/notification-filters';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -17,6 +19,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { auth, form } = useNotifications();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,8 +27,33 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
     setIsLoading(true);
     setError(null);
 
+    // Enhanced validation
+    if (!email.trim()) {
+      form.validationError('Please enter your email');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!email.includes('@')) {
+      form.invalidFormat('email address');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!password.trim()) {
+      form.validationError('Please enter a password');
+      setIsLoading(false);
+      return;
+    }
+
+    if (password.length < 6) {
+      form.validationError('Password must be at least 6 characters long');
+      setIsLoading(false);
+      return;
+    }
+
     if (password !== repeatPassword) {
-      setError('Passwords do not match');
+      form.validationError('Passwords do not match');
       setIsLoading(false);
       return;
     }
@@ -38,10 +66,24 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
           emailRedirectTo: `${window.location.origin}/protected`,
         },
       });
-      if (error) throw error;
-      router.push('/auth/sign-up-success');
+
+      if (error) {
+        let userMessage: string;
+        if (error.message.includes('User already registered')) {
+          userMessage = 'An account with this email already exists. Please sign in instead.';
+        } else {
+          userMessage = getUserFriendlyErrorMessage(error, 'Failed to create account');
+        }
+        auth.signupError(userMessage);
+        setError(userMessage);
+      } else {
+        auth.signupSuccess();
+        router.push('/auth/sign-up-success');
+      }
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : 'An error occurred');
+      const userMessage = getUserFriendlyErrorMessage(error, 'Failed to create account');
+      auth.signupError(userMessage);
+      setError(userMessage);
     } finally {
       setIsLoading(false);
     }
