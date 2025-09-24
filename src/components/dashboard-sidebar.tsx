@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import { FileText, Home, PenTool, Settings, User } from 'lucide-react';
+import { FileText, Home, MessageSquare, PenTool, Settings, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -19,6 +19,11 @@ const navigationItems = [
     title: 'Blogs',
     href: '/dashboard/blogs',
     icon: FileText,
+  },
+  {
+    title: 'AI Chat',
+    href: '/chat',
+    icon: MessageSquare,
   },
   {
     title: 'Settings',
@@ -50,7 +55,7 @@ export function DashboardSidebar() {
       <nav className="flex-1 p-4">
         <ul className="space-y-2">
           {navigationItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = pathname === item.href || (item.href === '/chat' && pathname.startsWith('/chat'));
             const Icon = item.icon;
 
             return (

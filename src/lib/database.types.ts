@@ -47,6 +47,62 @@ export type Database = {
         };
         Relationships: [];
       };
+      chats: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          title?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      messages: {
+        Row: {
+          id: string;
+          chat_id: string;
+          role: 'user' | 'assistant' | 'system';
+          content: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          chat_id: string;
+          role: 'user' | 'assistant' | 'system';
+          content: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          chat_id?: string;
+          role?: 'user' | 'assistant' | 'system';
+          content?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'messages_chat_id_fkey';
+            columns: ['chat_id'];
+            isOneToOne: false;
+            referencedRelation: 'chats';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -184,6 +240,15 @@ export type Blog = Tables<'blogs'>;
 export type BlogInsert = TablesInsert<'blogs'>;
 export type BlogUpdate = TablesUpdate<'blogs'>;
 
+// Chat specific types
+export type Chat = Tables<'chats'>;
+export type ChatInsert = TablesInsert<'chats'>;
+export type ChatUpdate = TablesUpdate<'chats'>;
+
+export type Message = Tables<'messages'>;
+export type MessageInsert = TablesInsert<'messages'>;
+export type MessageUpdate = TablesUpdate<'messages'>;
+
 // Form data types for blog operations
 export interface BlogFormData {
   title: string;
@@ -191,4 +256,9 @@ export interface BlogFormData {
   image?: string;
   content: string;
   author: string;
+}
+
+// Chat form data types
+export interface ChatWithMessages extends Chat {
+  messages: Message[];
 }
