@@ -20,6 +20,9 @@ export function NotificationHandler() {
           case 'blog_created':
             blog.createSuccess();
             break;
+          case 'ai_blog_generated':
+            blog.aiGenerateSuccess();
+            break;
           case 'blog_updated':
             blog.updateSuccess();
             break;

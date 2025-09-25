@@ -2,8 +2,11 @@
 
 import { type Blog, type BlogFormData, type BlogInsert, type BlogUpdate } from '@/lib/database.types';
 import { createClient } from '@/lib/supabase/server';
+import { google } from '@ai-sdk/google';
+import { generateObject } from 'ai';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { z } from 'zod';
 
 // Get all blogs with pagination
 export async function getBlogs(page = 1, limit = 10) {
@@ -268,4 +271,103 @@ export async function searchBlogs(query: string, page = 1, limit = 10) {
     totalCount: count || 0,
     hasMore: count ? count > to + 1 : false,
   };
+}
+
+// AI Blog Generation Schema
+const blogGenerationSchema = z.object({
+  title: z.string().min(3).max(200).describe('The title of the blog post'),
+  subtitle: z.string().max(300).optional().describe('An optional subtitle or tagline for the blog post'),
+  content: z
+    .string()
+    .min(100)
+    .describe('The main content of the blog post in HTML format with proper headings, paragraphs, and formatting'),
+});
+
+// Interface for AI blog generation input
+export interface AIBlogGenerationData {
+  description: string;
+  author: string;
+}
+
+// Generate blog content using Google AI
+export async function generateBlogWithAI(data: AIBlogGenerationData) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    throw new Error('User not authenticated');
+  }
+
+  // Validate input
+  if (!data.description.trim()) {
+    throw new Error('Blog description is required');
+  }
+
+  if (!data.author.trim()) {
+    throw new Error('Author name is required');
+  }
+
+  try {
+    // Generate blog content using Google AI
+    const { object: generatedBlog } = await generateObject({
+      model: google('gemini-1.5-flash'),
+      schema: blogGenerationSchema,
+      prompt: `Create a high-quality, engaging blog post based on the following description: "${data.description}"
+      
+      Requirements:
+      - Write in a professional yet accessible tone
+      - Include proper HTML formatting with headings (h2, h3), paragraphs, lists, and emphasis where appropriate
+      - Make it informative and engaging for readers
+      - Include practical insights or actionable advice where relevant
+      - Ensure the content is well-structured with clear sections
+      - The content should be substantial (at least 800-1200 words)
+      - Use proper HTML tags like <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>, etc.
+      - Do not include any image tags or references to images in the content
+      
+      Generate a compelling title and optional subtitle along with the full content.`,
+    });
+
+    // Prepare blog data for insertion
+    const { data: slugData, error: slugError } = await supabase.rpc('generate_slug', {
+      title: generatedBlog.title,
+    });
+
+    if (slugError) {
+      throw new Error('Failed to generate slug');
+    }
+
+    const blogData: BlogInsert = {
+      title: generatedBlog.title,
+      slug: slugData,
+      subtitle: generatedBlog.subtitle || null,
+      content: generatedBlog.content,
+      author: data.author,
+      user_id: user.id,
+      image: null, // No image for AI-generated blogs initially
+    };
+
+    // Insert the blog into the database
+    const { data: blog, error } = await supabase.from('blogs').insert(blogData).select().single();
+
+    if (error) {
+      throw new Error('Failed to save AI-generated blog');
+    }
+
+    // Revalidate and redirect to edit page
+    revalidatePath('/dashboard/blogs');
+    redirect(`/dashboard/blogs/${blog.slug}/edit?success=ai_blog_generated`);
+  } catch (error) {
+    // Handle redirect errors - these are expected and should be re-thrown
+    if (error instanceof Error && (error.message.includes('NEXT_REDIRECT') || error.message.includes('redirect'))) {
+      throw error; // Re-throw redirect errors without logging
+    }
+
+    // Log and handle actual errors
+    console.error('AI blog generation error:', error);
+    throw new Error('Failed to generate blog content. Please try again with a different description.');
+  }
 }

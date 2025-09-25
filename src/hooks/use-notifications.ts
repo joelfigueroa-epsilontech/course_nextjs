@@ -123,6 +123,7 @@ export function useNotifications() {
         error('Failed to create blog post.');
       }
     },
+    aiGenerateSuccess: () => success('AI blog post generated successfully! You can now edit and customize it.'),
     updateSuccess: () => success('Blog post updated successfully!'),
     updateError: (errorMessage?: string) => {
       if (errorMessage) {
