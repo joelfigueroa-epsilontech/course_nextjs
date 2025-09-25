@@ -134,4 +134,3 @@ export function AIBlogForm({ open, onOpenChange, onBack }: AIBlogFormProps) {
     </Dialog>
   );
 }
-

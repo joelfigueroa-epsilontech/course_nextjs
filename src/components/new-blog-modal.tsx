@@ -17,7 +17,7 @@ export function NewBlogModal({ open, onOpenChange, onCreateFromScratch, onCreate
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Create New Blog Post</DialogTitle>
-          <DialogDescription>Choose how you'd like to create your new blog post</DialogDescription>
+          <DialogDescription>Choose how you&apos;d like to create your new blog post</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
@@ -45,4 +45,3 @@ export function NewBlogModal({ open, onOpenChange, onCreateFromScratch, onCreate
     </Dialog>
   );
 }
-
