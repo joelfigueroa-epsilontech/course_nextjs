@@ -10,7 +10,7 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript", "plugin:prettier/recommended", "airbnb", "airbnb/hooks", "airbnb-typescript"),
+  ...compat.extends("next/core-web-vitals", "next/typescript", "prettier"),
   {
     ignores: [
       "node_modules/**",
@@ -23,10 +23,20 @@ const eslintConfig = [
       "max-len": [
         "error",
         {
-          code: 140
+          code: 140,
+          ignorePattern: "^import\\s.+\\sfrom\\s.+;$|^export\\s.+\\sfrom\\s.+;$",
+          ignoreUrls: true,
+          ignoreComments: false,
+          ignoreRegExpLiterals: true,
+          ignoreStrings: true,
+          ignoreTemplateLiterals: true,
         },
       ],
       quotes: [2, "single", { avoidEscape: true }],
+      // React and Next.js specific rules
+      "react/react-in-jsx-scope": "off",
+      "react/prop-types": "off",
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
     },
   },
 ];
