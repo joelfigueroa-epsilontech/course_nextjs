@@ -9,6 +9,26 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
+// Input validation schemas
+const blogFormSchema = z.object({
+  title: z.string().min(3, 'Title must be at least 3 characters').max(200, 'Title must be less than 200 characters'),
+  subtitle: z.string().max(300, 'Subtitle must be less than 300 characters').optional().nullable(),
+  content: z.string().min(10, 'Content must be at least 10 characters'),
+  author: z.string().min(1, 'Author is required').max(100, 'Author must be less than 100 characters'),
+  image: z.string().url('Invalid image URL').optional().nullable(),
+});
+
+const searchQuerySchema = z.object({
+  query: z.string().min(1, 'Search query is required').max(100, 'Search query must be less than 100 characters'),
+  page: z.number().int().min(1).default(1),
+  limit: z.number().int().min(1).max(50).default(10),
+});
+
+const aiBlogGenerationSchema = z.object({
+  description: z.string().min(10, 'Description must be at least 10 characters').max(500, 'Description must be less than 500 characters'),
+  author: z.string().min(1, 'Author is required').max(100, 'Author must be less than 100 characters'),
+});
+
 // Get all blogs with pagination
 export async function getBlogs(page = 1, limit = 10) {
   const supabase = await createClient();
@@ -150,25 +170,29 @@ export async function createBlog(formData: BlogFormData) {
     throw new Error('User not authenticated');
   }
 
-  // Validate required fields
-  if (!formData.title || !formData.content || !formData.author) {
-    throw new Error('Title, content, and author are required');
+  // Validate input data
+  const validationResult = blogFormSchema.safeParse(formData);
+  if (!validationResult.success) {
+    const errors = validationResult.error.issues.map((issue) => issue.message).join(', ');
+    throw new Error(`Validation failed: ${errors}`);
   }
 
+  const validatedData = validationResult.data;
+
   // Generate slug from title (the database trigger will handle uniqueness)
-  const { data: slugData, error: slugError } = await supabase.rpc('generate_slug', { title: formData.title });
+  const { data: slugData, error: slugError } = await supabase.rpc('generate_slug', { title: validatedData.title });
 
   if (slugError) {
     throw new Error('Failed to generate slug');
   }
 
   const blogData: BlogInsert = {
-    title: formData.title,
+    title: validatedData.title,
     slug: slugData,
-    subtitle: formData.subtitle || null,
-    image: formData.image || null,
-    content: formData.content,
-    author: formData.author,
+    subtitle: validatedData.subtitle || null,
+    image: validatedData.image || null,
+    content: validatedData.content,
+    author: validatedData.author,
     user_id: user.id,
   };
 
@@ -195,17 +219,26 @@ export async function updateBlog(id: string, formData: BlogFormData) {
     throw new Error('User not authenticated');
   }
 
-  // Validate required fields
-  if (!formData.title || !formData.content || !formData.author) {
-    throw new Error('Title, content, and author are required');
+  // Validate blog ID
+  if (!id || typeof id !== 'string') {
+    throw new Error('Invalid blog ID');
   }
 
+  // Validate input data
+  const validationResult = blogFormSchema.safeParse(formData);
+  if (!validationResult.success) {
+    const errors = validationResult.error.issues.map((issue) => issue.message).join(', ');
+    throw new Error(`Validation failed: ${errors}`);
+  }
+
+  const validatedData = validationResult.data;
+
   const blogData: BlogUpdate = {
-    title: formData.title,
-    subtitle: formData.subtitle || null,
-    image: formData.image || null,
-    content: formData.content,
-    author: formData.author,
+    title: validatedData.title,
+    subtitle: validatedData.subtitle || null,
+    image: validatedData.image || null,
+    content: validatedData.content,
+    author: validatedData.author,
   };
 
   const { data: blog, error } = await supabase.from('blogs').update(blogData).eq('id', id).eq('user_id', user.id).select().single();
@@ -249,8 +282,20 @@ export async function deleteBlog(id: string) {
 export async function searchBlogs(query: string, page = 1, limit = 10) {
   const supabase = await createClient();
 
-  const from = (page - 1) * limit;
-  const to = from + limit - 1;
+  // Validate search parameters
+  const validationResult = searchQuerySchema.safeParse({ query, page, limit });
+  if (!validationResult.success) {
+    const errors = validationResult.error.issues.map((issue) => issue.message).join(', ');
+    throw new Error(`Validation failed: ${errors}`);
+  }
+
+  const { query: validatedQuery, page: validatedPage, limit: validatedLimit } = validationResult.data;
+
+  // Sanitize query to prevent injection - escape special characters
+  const sanitizedQuery = validatedQuery.replace(/[%_]/g, '\\$&');
+
+  const from = (validatedPage - 1) * validatedLimit;
+  const to = from + validatedLimit - 1;
 
   const {
     data: blogs,
@@ -259,7 +304,7 @@ export async function searchBlogs(query: string, page = 1, limit = 10) {
   } = await supabase
     .from('blogs')
     .select('*', { count: 'exact' })
-    .or(`title.ilike.%${query}%, content.ilike.%${query}%, author.ilike.%${query}%`)
+    .or(`title.ilike.%${sanitizedQuery}%, content.ilike.%${sanitizedQuery}%, author.ilike.%${sanitizedQuery}%`)
     .order('created_at', { ascending: false })
     .range(from, to);
 
@@ -303,21 +348,21 @@ export async function generateBlogWithAI(data: AIBlogGenerationData) {
     throw new Error('User not authenticated');
   }
 
-  // Validate input
-  if (!data.description.trim()) {
-    throw new Error('Blog description is required');
+  // Validate input data
+  const validationResult = aiBlogGenerationSchema.safeParse(data);
+  if (!validationResult.success) {
+    const errors = validationResult.error.issues.map((issue) => issue.message).join(', ');
+    throw new Error(`Validation failed: ${errors}`);
   }
 
-  if (!data.author.trim()) {
-    throw new Error('Author name is required');
-  }
+  const { description, author } = validationResult.data;
 
   try {
     // Generate blog content using Google AI
     const { object: generatedBlog } = await generateObject({
       model: google('gemini-1.5-flash'),
       schema: blogGenerationSchema,
-      prompt: `Create a high-quality, engaging blog post based on the following description: "${data.description}"
+      prompt: `Create a high-quality, engaging blog post based on the following description: "${description}"
       
       Requirements:
       - Write in a professional yet accessible tone
@@ -346,7 +391,7 @@ export async function generateBlogWithAI(data: AIBlogGenerationData) {
       slug: slugData,
       subtitle: generatedBlog.subtitle || null,
       content: generatedBlog.content,
-      author: data.author,
+      author: author,
       user_id: user.id,
       image: null, // No image for AI-generated blogs initially
     };

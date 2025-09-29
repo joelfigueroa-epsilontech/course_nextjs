@@ -59,7 +59,7 @@ export async function updateSession(request: NextRequest) {
         // User is not admin, redirect to unauthorized page or dashboard
         const url = request.nextUrl.clone();
         url.pathname = '/dashboard';
-        url.searchParams.set('error', 'unauthorized');
+        url.searchParams.set('error', 'unauthorized_admin_access');
         return NextResponse.redirect(url);
       }
     } catch (error) {

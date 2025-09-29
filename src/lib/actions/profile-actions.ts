@@ -4,6 +4,20 @@ import { type Profile, type ProfileUpdate, UserRole } from '@/lib/database.types
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUserProfile, isAdmin, withAdminRole } from '@/lib/utils/rbac';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
+
+// Input validation schemas
+const profileUpdateSchema = z.object({
+  full_name: z.string().min(1, 'Full name is required').max(100, 'Full name must be less than 100 characters').optional(),
+  avatar_url: z.string().url('Invalid avatar URL').optional().nullable(),
+  role: z.enum(['user', 'admin']).optional(),
+});
+
+const searchProfileSchema = z.object({
+  query: z.string().min(1, 'Search query is required').max(100, 'Search query must be less than 100 characters'),
+  page: z.number().int().min(1).default(1),
+  limit: z.number().int().min(1).max(50).default(20),
+});
 
 // Get current user's profile
 export async function getCurrentProfile(): Promise<Profile | null> {
@@ -23,13 +37,23 @@ export async function updateProfile(profileData: Partial<ProfileUpdate>) {
     throw new Error('User not authenticated');
   }
 
-  // Remove role from profileData if user is not admin
-  const adminAccess = await isAdmin();
-  if (!adminAccess && profileData.role) {
-    delete profileData.role;
+  // Validate input data
+  const validationResult = profileUpdateSchema.safeParse(profileData);
+  if (!validationResult.success) {
+    const errors = validationResult.error.issues.map((issue) => issue.message).join(', ');
+    throw new Error(`Validation failed: ${errors}`);
   }
 
-  const { data: profile, error } = await supabase.from('profiles').update(profileData).eq('id', user.id).select().single();
+  let validatedData = validationResult.data;
+
+  // Remove role from profileData if user is not admin
+  const adminAccess = await isAdmin();
+  if (!adminAccess && validatedData.role) {
+    const { role, ...dataWithoutRole } = validatedData;
+    validatedData = dataWithoutRole;
+  }
+
+  const { data: profile, error } = await supabase.from('profiles').update(validatedData).eq('id', user.id).select().single();
 
   if (error) {
     throw new Error('Failed to update profile');
@@ -199,8 +223,20 @@ export const getUserStatistics = withAdminRole(async () => {
 export const searchProfilesForAdmin = withAdminRole(async (query: string, page = 1, limit = 20) => {
   const supabase = await createClient();
 
-  const from = (page - 1) * limit;
-  const to = from + limit - 1;
+  // Validate search parameters
+  const validationResult = searchProfileSchema.safeParse({ query, page, limit });
+  if (!validationResult.success) {
+    const errors = validationResult.error.issues.map((issue) => issue.message).join(', ');
+    throw new Error(`Validation failed: ${errors}`);
+  }
+
+  const { query: validatedQuery, page: validatedPage, limit: validatedLimit } = validationResult.data;
+
+  // Sanitize query to prevent injection - escape special characters
+  const sanitizedQuery = validatedQuery.replace(/[%_]/g, '\\$&');
+
+  const from = (validatedPage - 1) * validatedLimit;
+  const to = from + validatedLimit - 1;
 
   const {
     data: profiles,
@@ -209,7 +245,7 @@ export const searchProfilesForAdmin = withAdminRole(async (query: string, page =
   } = await supabase
     .from('profiles')
     .select('*', { count: 'exact' })
-    .or(`full_name.ilike.%${query}%, email.ilike.%${query}%`)
+    .or(`full_name.ilike.%${sanitizedQuery}%, email.ilike.%${sanitizedQuery}%`)
     .order('created_at', { ascending: false })
     .range(from, to);
 
