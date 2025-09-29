@@ -62,7 +62,7 @@ export async function updateSession(request: NextRequest) {
         url.searchParams.set('error', 'unauthorized_admin_access');
         return NextResponse.redirect(url);
       }
-    } catch (error) {
+    } catch {
       // Error fetching profile, redirect to login
       const url = request.nextUrl.clone();
       url.pathname = '/auth/login';

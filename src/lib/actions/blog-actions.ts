@@ -421,7 +421,7 @@ export async function generateBlogWithAI(data: AIBlogGenerationData) {
 // Admin-specific functions for managing all blogs
 
 // Get all blogs for admin (no user restriction)
-export const getAllBlogsForAdmin = withAdminRole(async (page = 1, limit = 10) => {
+export const getAllBlogsForAdmin = withAdminRole(async (page: number = 1, limit: number = 10) => {
   const supabase = await createClient();
 
   const from = (page - 1) * limit;
@@ -468,17 +468,26 @@ export const getBlogByIdForAdmin = withAdminRole(async (id: string): Promise<Blo
 export const updateBlogAsAdmin = withAdminRole(async (id: string, formData: BlogFormData) => {
   const supabase = await createClient();
 
-  // Validate required fields
-  if (!formData.title || !formData.content || !formData.author) {
-    throw new Error('Title, content, and author are required');
+  // Validate blog ID
+  if (!id || typeof id !== 'string') {
+    throw new Error('Invalid blog ID');
   }
 
+  // Validate input data
+  const validationResult = blogFormSchema.safeParse(formData);
+  if (!validationResult.success) {
+    const errors = validationResult.error.issues.map((issue) => issue.message).join(', ');
+    throw new Error(`Validation failed: ${errors}`);
+  }
+
+  const validatedData = validationResult.data;
+
   const blogData: BlogUpdate = {
-    title: formData.title,
-    subtitle: formData.subtitle || null,
-    image: formData.image || null,
-    content: formData.content,
-    author: formData.author,
+    title: validatedData.title,
+    subtitle: validatedData.subtitle || null,
+    image: validatedData.image || null,
+    content: validatedData.content,
+    author: validatedData.author,
   };
 
   const { data: blog, error } = await supabase.from('blogs').update(blogData).eq('id', id).select().single();
@@ -493,12 +502,17 @@ export const updateBlogAsAdmin = withAdminRole(async (id: string, formData: Blog
   revalidatePath('/admin/blogs');
   revalidatePath('/dashboard/blogs');
   revalidatePath(`/blogs/${blog.slug}`);
-  redirect(`/admin/blogs?success=blog_updated`);
+  redirect('/admin/blogs?success=blog_updated');
 });
 
 // Delete any blog as admin (no user restriction)
 export const deleteBlogAsAdmin = withAdminRole(async (id: string) => {
   const supabase = await createClient();
+
+  // Validate blog ID
+  if (!id || typeof id !== 'string') {
+    throw new Error('Invalid blog ID');
+  }
 
   const { error } = await supabase.from('blogs').delete().eq('id', id);
 

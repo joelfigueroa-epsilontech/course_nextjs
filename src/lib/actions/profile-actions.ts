@@ -49,6 +49,7 @@ export async function updateProfile(profileData: Partial<ProfileUpdate>) {
   // Remove role from profileData if user is not admin
   const adminAccess = await isAdmin();
   if (!adminAccess && validatedData.role) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { role, ...dataWithoutRole } = validatedData;
     validatedData = dataWithoutRole;
   }
@@ -66,7 +67,7 @@ export async function updateProfile(profileData: Partial<ProfileUpdate>) {
 // Admin-specific functions for managing all profiles
 
 // Get all profiles for admin
-export const getAllProfilesForAdmin = withAdminRole(async (page = 1, limit = 20) => {
+export const getAllProfilesForAdmin = withAdminRole(async (page: number = 1, limit: number = 20) => {
   const supabase = await createClient();
 
   const from = (page - 1) * limit;
@@ -220,7 +221,7 @@ export const getUserStatistics = withAdminRole(async () => {
 });
 
 // Search profiles for admin
-export const searchProfilesForAdmin = withAdminRole(async (query: string, page = 1, limit = 20) => {
+export const searchProfilesForAdmin = withAdminRole(async (query: string, page: number = 1, limit: number = 20) => {
   const supabase = await createClient();
 
   // Validate search parameters
