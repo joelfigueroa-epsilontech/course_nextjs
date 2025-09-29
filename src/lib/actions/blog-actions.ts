@@ -2,6 +2,7 @@
 
 import { type Blog, type BlogFormData, type BlogInsert, type BlogUpdate } from '@/lib/database.types';
 import { createClient } from '@/lib/supabase/server';
+import { isAdmin, withAdminRole } from '@/lib/utils/rbac';
 import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
 import { revalidatePath } from 'next/cache';
@@ -370,4 +371,169 @@ export async function generateBlogWithAI(data: AIBlogGenerationData) {
     console.error('AI blog generation error:', error);
     throw new Error('Failed to generate blog content. Please try again with a different description.');
   }
+}
+
+// Admin-specific functions for managing all blogs
+
+// Get all blogs for admin (no user restriction)
+export const getAllBlogsForAdmin = withAdminRole(async (page = 1, limit = 10) => {
+  const supabase = await createClient();
+
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  const {
+    data: blogs,
+    error,
+    count,
+  } = await supabase
+    .from('blogs')
+    .select('*, profiles(full_name, email)', { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(from, to);
+
+  if (error) {
+    throw new Error('Failed to fetch blogs for admin');
+  }
+
+  return {
+    blogs: blogs as (Blog & { profiles: { full_name: string | null; email: string } | null })[],
+    totalCount: count || 0,
+    hasMore: count ? count > to + 1 : false,
+  };
+});
+
+// Get any blog by ID for admin (no user restriction)
+export const getBlogByIdForAdmin = withAdminRole(async (id: string): Promise<Blog | null> => {
+  const supabase = await createClient();
+
+  const { data: blog, error } = await supabase.from('blogs').select('*').eq('id', id).single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      return null; // Blog not found
+    }
+    throw new Error('Failed to fetch blog');
+  }
+
+  return blog as Blog;
+});
+
+// Update any blog as admin (no user restriction)
+export const updateBlogAsAdmin = withAdminRole(async (id: string, formData: BlogFormData) => {
+  const supabase = await createClient();
+
+  // Validate required fields
+  if (!formData.title || !formData.content || !formData.author) {
+    throw new Error('Title, content, and author are required');
+  }
+
+  const blogData: BlogUpdate = {
+    title: formData.title,
+    subtitle: formData.subtitle || null,
+    image: formData.image || null,
+    content: formData.content,
+    author: formData.author,
+  };
+
+  const { data: blog, error } = await supabase.from('blogs').update(blogData).eq('id', id).select().single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      throw new Error('Blog not found');
+    }
+    throw new Error(`Failed to update blog: ${error.message}`);
+  }
+
+  revalidatePath('/admin/blogs');
+  revalidatePath('/dashboard/blogs');
+  revalidatePath(`/blogs/${blog.slug}`);
+  redirect(`/admin/blogs?success=blog_updated`);
+});
+
+// Delete any blog as admin (no user restriction)
+export const deleteBlogAsAdmin = withAdminRole(async (id: string) => {
+  const supabase = await createClient();
+
+  const { error } = await supabase.from('blogs').delete().eq('id', id);
+
+  if (error) {
+    throw new Error('Failed to delete blog');
+  }
+
+  revalidatePath('/admin/blogs');
+  revalidatePath('/dashboard/blogs');
+  return { success: true };
+});
+
+// Enhanced getBlogById that works for both users and admins
+export async function getBlogByIdEnhanced(id: string): Promise<Blog | null> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    throw new Error('User not authenticated');
+  }
+
+  // Check if user is admin
+  const adminAccess = await isAdmin();
+
+  let query = supabase.from('blogs').select('*').eq('id', id);
+
+  // If not admin, restrict to user's own blogs
+  if (!adminAccess) {
+    query = query.eq('user_id', user.id);
+  }
+
+  const { data: blog, error } = await query.single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      return null; // Blog not found or user doesn't own it
+    }
+    throw new Error('Failed to fetch blog');
+  }
+
+  return blog as Blog;
+}
+
+// Enhanced deleteBlog that works for both users and admins
+export async function deleteBlogEnhanced(id: string) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    throw new Error('User not authenticated');
+  }
+
+  // Check if user is admin
+  const adminAccess = await isAdmin();
+
+  let query = supabase.from('blogs').delete().eq('id', id);
+
+  // If not admin, restrict to user's own blogs
+  if (!adminAccess) {
+    query = query.eq('user_id', user.id);
+  }
+
+  const { error } = await query;
+
+  if (error) {
+    throw new Error('Failed to delete blog');
+  }
+
+  revalidatePath('/dashboard/blogs');
+  if (adminAccess) {
+    revalidatePath('/admin/blogs');
+  }
+
+  return { success: true };
 }

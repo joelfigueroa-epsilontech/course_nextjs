@@ -4,16 +4,11 @@
 -- Affected: storage.buckets, storage.objects tables
 -- Dependencies: storage schema (already available in Supabase)
 
--- Create a public bucket for blog images
+-- Create a public bucket for blog images (if it doesn't exist)
 -- Public buckets allow direct access to files without authentication
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values (
-  'blog-images',                    -- bucket id
-  'blog-images',                    -- bucket name
-  true,                            -- public bucket (files accessible via direct URL)
-  5242880,                         -- 5MB file size limit
-  array['image/jpeg', 'image/png', 'image/gif', 'image/webp']  -- allowed image types
-);
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) 
+select 'blog-images', 'blog-images', true, 5242880, array['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+where not exists (select 1 from storage.buckets where id = 'blog-images');
 
 -- Note: Row Level Security is already enabled on storage.objects by Supabase
 

@@ -103,6 +103,44 @@ export type Database = {
           },
         ];
       };
+      profiles: {
+        Row: {
+          id: string;
+          email: string;
+          full_name: string | null;
+          avatar_url: string | null;
+          role: 'user' | 'admin';
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          email: string;
+          full_name?: string | null;
+          avatar_url?: string | null;
+          role?: 'user' | 'admin';
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          full_name?: string | null;
+          avatar_url?: string | null;
+          role?: 'user' | 'admin';
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'profiles_id_fkey';
+            columns: ['id'];
+            isOneToOne: true;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -114,7 +152,7 @@ export type Database = {
       };
     };
     Enums: {
-      [_ in never]: never;
+      user_role: 'user' | 'admin';
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -262,3 +300,11 @@ export interface BlogFormData {
 export interface ChatWithMessages extends Chat {
   messages: Message[];
 }
+
+// Profile specific types
+export type Profile = Tables<'profiles'>;
+export type ProfileInsert = TablesInsert<'profiles'>;
+export type ProfileUpdate = TablesUpdate<'profiles'>;
+
+// User role enum type
+export type UserRole = 'user' | 'admin';

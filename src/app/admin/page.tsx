@@ -1,9 +1,13 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { getUserStatistics } from '@/lib/actions/profile-actions';
 import { createClient } from '@/lib/supabase/server';
-import { BarChart3, FileText, MessageSquare, Users } from 'lucide-react';
+import { FileText, MessageSquare, Users } from 'lucide-react';
 
 interface AnalyticsData {
   totalUsers: number;
+  adminUsers: number;
+  regularUsers: number;
+  recentUsers: number;
   totalBlogs: number;
   totalChats: number;
   totalMessages: number;
@@ -13,9 +17,11 @@ interface AnalyticsData {
     author: string;
     created_at: string;
   }>;
-  recentUsers: Array<{
-    user_id: string | null;
-    author: string;
+  recentProfiles: Array<{
+    id: string;
+    full_name: string | null;
+    email: string;
+    role: 'user' | 'admin';
     created_at: string;
   }>;
 }
@@ -24,17 +30,15 @@ async function getAnalyticsData(): Promise<AnalyticsData> {
   const supabase = await createClient();
 
   try {
-    // Get counts for all entities
+    // Get user statistics using the new RBAC function
+    const userStats = await getUserStatistics();
+
+    // Get counts for other entities
     const [blogsResult, chatsResult, messagesResult] = await Promise.all([
       supabase.from('blogs').select('*', { count: 'exact', head: true }),
       supabase.from('chats').select('*', { count: 'exact', head: true }),
       supabase.from('messages').select('*', { count: 'exact', head: true }),
     ]);
-
-    // Count unique users from blog authors (as proxy for total users)
-    const { data: blogAuthors } = await supabase.from('blogs').select('user_id, author');
-
-    const uniqueUsers = new Set(blogAuthors?.map((b) => b.user_id).filter(Boolean) || []).size;
 
     // Get recent blogs (last 5)
     const { data: recentBlogs } = await supabase
@@ -43,31 +47,36 @@ async function getAnalyticsData(): Promise<AnalyticsData> {
       .order('created_at', { ascending: false })
       .limit(5);
 
-    // Get recent users from auth metadata (this is a workaround since we can't directly query auth.users)
-    // In a real app, you'd have a profiles table or user metadata table
-    const { data: recentUsers } = await supabase
-      .from('blogs')
-      .select('user_id, author, created_at')
+    // Get recent profiles (last 5)
+    const { data: recentProfiles } = await supabase
+      .from('profiles')
+      .select('id, full_name, email, role, created_at')
       .order('created_at', { ascending: false })
       .limit(5);
 
     return {
-      totalUsers: uniqueUsers,
+      totalUsers: userStats.totalUsers,
+      adminUsers: userStats.adminUsers,
+      regularUsers: userStats.regularUsers,
+      recentUsers: userStats.recentUsers,
       totalBlogs: blogsResult.count || 0,
       totalChats: chatsResult.count || 0,
       totalMessages: messagesResult.count || 0,
       recentBlogs: recentBlogs || [],
-      recentUsers: recentUsers || [],
+      recentProfiles: recentProfiles || [],
     };
   } catch (error) {
     console.error('Error fetching analytics data:', error);
     return {
       totalUsers: 0,
+      adminUsers: 0,
+      regularUsers: 0,
+      recentUsers: 0,
       totalBlogs: 0,
       totalChats: 0,
       totalMessages: 0,
       recentBlogs: [],
-      recentUsers: [],
+      recentProfiles: [],
     };
   }
 }
@@ -79,9 +88,16 @@ export default async function AdminHomePage() {
     {
       title: 'Total Users',
       value: analyticsData.totalUsers.toLocaleString(),
-      description: 'Registered users',
+      description: `${analyticsData.adminUsers} admins, ${analyticsData.regularUsers} users`,
       icon: Users,
       color: 'text-blue-500',
+    },
+    {
+      title: 'Recent Users',
+      value: analyticsData.recentUsers.toLocaleString(),
+      description: 'New users (last 30 days)',
+      icon: Users,
+      color: 'text-cyan-500',
     },
     {
       title: 'Total Blogs',
@@ -96,13 +112,6 @@ export default async function AdminHomePage() {
       description: 'AI chat sessions',
       icon: MessageSquare,
       color: 'text-purple-500',
-    },
-    {
-      title: 'Total Messages',
-      value: analyticsData.totalMessages.toLocaleString(),
-      description: 'Chat messages exchanged',
-      icon: BarChart3,
-      color: 'text-orange-500',
     },
   ];
 
@@ -164,35 +173,41 @@ export default async function AdminHomePage() {
           </CardContent>
         </Card>
 
-        {/* Recent User Activity */}
+        {/* Recent User Registrations */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Recent User Activity
+              Recent User Registrations
             </CardTitle>
-            <CardDescription>Latest user activity and registrations</CardDescription>
+            <CardDescription>Latest user registrations and profiles</CardDescription>
           </CardHeader>
           <CardContent>
-            {analyticsData.recentUsers.length > 0 ? (
+            {analyticsData.recentProfiles.length > 0 ? (
               <div className="space-y-4">
-                {analyticsData.recentUsers.map((user, index) => (
-                  <div
-                    key={user.user_id || index}
-                    className="flex justify-between items-start border-b border-border/50 pb-3 last:border-0"
-                  >
+                {analyticsData.recentProfiles.map((profile) => (
+                  <div key={profile.id} className="flex justify-between items-start border-b border-border/50 pb-3 last:border-0">
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{user.author}</p>
-                      <p className="text-sm text-muted-foreground">Created content</p>
+                      <p className="font-medium truncate">{profile.full_name || 'Anonymous User'}</p>
+                      <p className="text-sm text-muted-foreground truncate">{profile.email}</p>
+                      <span
+                        className={`text-xs px-2 py-1 rounded-full ${
+                          profile.role === 'admin'
+                            ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                            : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                        }`}
+                      >
+                        {profile.role}
+                      </span>
                     </div>
                     <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">
-                      {new Date(user.created_at).toLocaleDateString()}
+                      {new Date(profile.created_at).toLocaleDateString()}
                     </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No user activity yet.</p>
+              <p className="text-sm text-muted-foreground">No user registrations yet.</p>
             )}
           </CardContent>
         </Card>
